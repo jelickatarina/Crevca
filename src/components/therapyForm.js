@@ -3,10 +3,12 @@ import { store, uid } from '../db.js';
 import { esc } from '../utils/html.js';
 import { toast } from '../toast.js';
 import { scheduleAllReminders } from '../notifications.js';
+import { daysRemaining } from '../utils/therapy.js';
 
 export function openTherapyForm(item, onDone) {
   const isEdit = !!item;
   const hasFixedTime = isEdit ? !!item.vreme : true;
+  const remaining = isEdit ? daysRemaining(item) : null;
   const sheet = openModal(`
     <div class="modal-head">
       <h2>${isEdit ? 'Izmeni stavku' : 'Dodaj lek ili suplement'}</h2>
@@ -31,6 +33,11 @@ export function openTherapyForm(item, onDone) {
           <input type="checkbox" name="podsetnik" ${item ? (item.podsetnik_ukljucen ? 'checked' : '') : 'checked'} />
           <span class="track"></span>
         </label>
+      </div>
+      <div class="field">
+        <label>Automatski arhiviraj posle (dana)</label>
+        <input type="number" name="trajanje" min="1" max="999" placeholder="ostavi prazno za trajno" value="${item?.trajanje_dana ?? ''}" />
+        ${remaining !== null ? `<div class="hint" style="margin:6px 0 0;">Ostalo još ${remaining} ${remaining === 1 ? 'dan' : 'dana'} pre automatskog arhiviranja</div>` : ''}
       </div>
       <div class="modal-actions">
         ${isEdit ? '<button type="button" class="btn-danger" id="del-therapy" style="flex:1;">Obriši</button>' : ''}
@@ -69,10 +76,13 @@ export function openTherapyForm(item, onDone) {
         const mode = fd.get('mode');
         const vreme = mode === 'fixed' ? fd.get('vreme') : null;
         const podsetnik_ukljucen = mode === 'fixed' && fd.get('podsetnik') === 'on';
+        const trajanjeRaw = fd.get('trajanje').trim();
+        const trajanje_dana = trajanjeRaw ? Math.max(1, Math.round(Number(trajanjeRaw))) : null;
         const record = item ? { ...item } : { id: uid(), arhivirano: false, createdAt: Date.now() };
         record.naziv = naziv;
         record.vreme = vreme;
         record.podsetnik_ukljucen = podsetnik_ukljucen;
+        record.trajanje_dana = trajanje_dana;
         await store.put('therapyItems', record);
         closeModal();
         toast('Sačuvano');

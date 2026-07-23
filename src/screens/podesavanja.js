@@ -2,21 +2,13 @@ import { esc } from '../utils/html.js';
 import { store, getSetting, setSetting, wipeAllData, initDB } from '../db.js';
 import { toast } from '../toast.js';
 import { requestPermission, permissionState, scheduleAllReminders } from '../notifications.js';
-import { drainOutbox, pendingCount } from '../sync.js';
-
-function backupStatus() {
-  if (!navigator.onLine) return { label: 'Bez interneta', small: `${pendingCount()} čeka slanje čim se povežeš` };
-  const pending = pendingCount();
-  if (pending > 0) return { label: 'Sinhronizacija u toku', small: `${pending} stavki čeka slanje` };
-  return { label: 'Ažurno', small: 'Svi podaci su sačuvani u cloud-u' };
-}
+import { daysRemaining } from '../utils/therapy.js';
 
 export async function renderPodesavanja(root, go) {
   const items = (await store.getAll('therapyItems')).filter(i => !i.arhivirano && i.vreme);
   items.sort((a, b) => a.vreme.localeCompare(b.vreme));
   const startDate = await getSetting('fodmapStartDate');
   const perm = permissionState();
-  const backup = backupStatus();
 
   root.innerHTML = `
     <div class="eyebrow">App</div>
@@ -38,15 +30,19 @@ export async function renderPodesavanja(root, go) {
     <div class="card">
       <h2>Podsetnici po stavci</h2>
       <div class="hint">Uključi/isključi podsetnik za svaku stavku terapije sa fiksnim vremenom.</div>
-      ${items.length ? items.map(it => `
+      ${items.length ? items.map(it => {
+        const remaining = daysRemaining(it);
+        const durLabel = remaining === null ? '' : ` · još ${remaining} ${remaining === 1 ? 'dan' : 'dana'}`;
+        return `
         <div class="settings-row">
-          <div class="l">${esc(it.naziv)}<small>${esc(it.vreme)}</small></div>
+          <div class="l">${esc(it.naziv)}<small>${esc(it.vreme)}${durLabel}</small></div>
           <label class="switch">
             <input type="checkbox" data-toggle-reminder="${it.id}" ${it.podsetnik_ukljucen ? 'checked' : ''} />
             <span class="track"></span>
           </label>
         </div>
-      `).join('') : '<div class="empty-hint">Nema stavki sa fiksnim vremenom</div>'}
+      `;
+      }).join('') : '<div class="empty-hint">Nema stavki sa fiksnim vremenom</div>'}
     </div>
 
     <div class="card">
@@ -59,17 +55,8 @@ export async function renderPodesavanja(root, go) {
     </div>
 
     <div class="card">
-      <h2>Sigurnosna kopija (cloud)</h2>
-      <div class="hint">Svaki unos se automatski čuva i lokalno i u cloud-u — za slučaj da izgubiš app podatke na telefonu. Radi u pozadini, ne treba nalog/lozinka.</div>
-      <div class="settings-row">
-        <div class="l">${esc(backup.label)}<small>${esc(backup.small)}</small></div>
-        <button class="save-btn ghost" id="sync-now" style="width:auto; margin-top:0; padding:10px 16px;">Sinhronizuj sada</button>
-      </div>
-    </div>
-
-    <div class="card">
       <h2>Podaci</h2>
-      <div class="hint">Podaci se čuvaju na ovom uređaju (i kao sigurnosna kopija u cloud-u). Brisanje je trajno i ne može se opozvati.</div>
+      <div class="hint">Svi podaci se čuvaju samo na ovom uređaju. Brisanje je trajno i ne može se opozvati.</div>
       <button class="btn-danger" id="wipe-data">Obriši sve podatke</button>
     </div>
   `;
@@ -101,12 +88,6 @@ export async function renderPodesavanja(root, go) {
     if (!e.target.value) return;
     await setSetting('fodmapStartDate', e.target.value);
     toast('Datum početka ažuriran');
-  });
-
-  root.querySelector('#sync-now').addEventListener('click', async () => {
-    await drainOutbox();
-    toast(pendingCount() === 0 ? 'Sinhronizovano' : 'Bez interneta — pokušaću ponovo kad se povežeš');
-    renderPodesavanja(root, go);
   });
 
   root.querySelector('#wipe-data').addEventListener('click', async () => {

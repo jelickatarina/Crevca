@@ -13,6 +13,8 @@ const VERDICT_LABEL = {
 };
 const VERDICT_CLASS = { podnosi: 'ok', delimicno: 'mid', ne_podnosi: 'bad' };
 
+let openVerdictEdit = null;
+
 function todayTaskCard(schedule, phase, todayIso) {
   if (phase.phase === 'pre') {
     return `<div class="today-task"><div class="tag">Uskoro</div><h2>Plan počinje ${esc(formatShortDate(schedule.eliminationStart))}</h2></div>`;
@@ -116,7 +118,10 @@ function verdictEntryHtml(group, verdict) {
         <button data-verdict="ne_podnosi" data-group="${group.index}" class="${verdict?.verdict === 'ne_podnosi' ? 'sel-bad' : ''}">Ne podnosim</button>
       </div>
       <textarea class="note-input" data-note="${group.index}" rows="2" maxlength="200" placeholder="Beleška (opciono)">${esc(verdict?.beleska || '')}</textarea>
-      <button class="save-btn" data-save-verdict="${group.index}" style="margin-top:10px;">Sačuvaj verdikt</button>
+      <div class="modal-actions" style="margin-top:10px;">
+        ${verdict ? `<button class="btn-danger" data-delete-verdict="${group.index}" style="flex:1;">Ukloni</button>` : ''}
+        <button class="save-btn" data-save-verdict="${group.index}" style="flex:${verdict ? 2 : 1}; margin-top:0;">Sačuvaj verdikt</button>
+      </div>
     </div>
   `;
 }
@@ -147,6 +152,10 @@ export async function renderFodmap(root, go) {
 
   const testedGroups = schedule.groups.filter((g) => todayIso >= g.testStart);
 
+  const showFormIndices = new Set(awaitingGroups.map((g) => g.index));
+  if (openVerdictEdit !== null) showFormIndices.add(openVerdictEdit);
+  const groupsWithForm = schedule.groups.filter((g) => showFormIndices.has(g.index));
+
   root.innerHTML = `
     <div class="eyebrow">Plan</div>
     <div class="pagetitle">FODMAP raspored</div>
@@ -159,16 +168,19 @@ export async function renderFodmap(root, go) {
       <div class="path">${pathHtml(schedule, phase, verdicts)}</div>
     </div>
 
-    ${awaitingGroups.map(g => verdictEntryHtml(g, verdicts[g.index])).join('')}
+    ${groupsWithForm.map(g => verdictEntryHtml(g, verdicts[g.index])).join('')}
 
     <div class="card">
       <h2>Do sada testirano</h2>
       ${testedGroups.length ? testedGroups.map(g => `
         <div class="verdict-row">
           <span style="font-size:13px;">${esc(g.name)}</span>
-          ${verdicts[g.index]
-            ? `<span class="verdict ${VERDICT_CLASS[verdicts[g.index].verdict]}">${VERDICT_LABEL[verdicts[g.index].verdict]}</span>`
-            : '<span class="verdict mid">čeka verdikt</span>'}
+          <span style="display:flex; align-items:center; gap:8px;">
+            ${verdicts[g.index]
+              ? `<span class="verdict ${VERDICT_CLASS[verdicts[g.index].verdict]}">${VERDICT_LABEL[verdicts[g.index].verdict]}</span>`
+              : '<span class="verdict mid">čeka verdikt</span>'}
+            ${verdicts[g.index] ? `<button class="link-btn" data-toggle-edit="${g.index}">${openVerdictEdit === g.index ? 'sakrij' : 'izmeni'}</button>` : ''}
+          </span>
         </div>
       `).join('') : '<div class="empty-hint">Još ništa nije testirano</div>'}
     </div>
@@ -231,6 +243,26 @@ export async function renderFodmap(root, go) {
       const note = card.querySelector('[data-note]').value.trim();
       await store.put('fodmapVerdicts', { groupIndex, verdict: pending, beleska: note, timestamp: Date.now() });
       toast('Verdikt sačuvan');
+      openVerdictEdit = null;
+      renderFodmap(root, go);
+    });
+  });
+
+  root.querySelectorAll('[data-delete-verdict]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const groupIndex = Number(btn.dataset.deleteVerdict);
+      if (!confirm('Ukloniti verdikt za ovu grupu?')) return;
+      await store.delete('fodmapVerdicts', groupIndex);
+      toast('Verdikt uklonjen');
+      openVerdictEdit = null;
+      renderFodmap(root, go);
+    });
+  });
+
+  root.querySelectorAll('[data-toggle-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.toggleEdit);
+      openVerdictEdit = openVerdictEdit === idx ? null : idx;
       renderFodmap(root, go);
     });
   });

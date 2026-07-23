@@ -5,6 +5,8 @@ import { SYMPTOMS, BRISTOL_TYPES } from '../data/symptoms.js';
 import { stoolStatsForRange, todayMaxBySymptom } from '../utils/stats.js';
 import { toast } from '../toast.js';
 import { consumeNavContext } from '../navContext.js';
+import { openSymptomEntryForm } from '../components/symptomEntryForm.js';
+import { openStoolEntryForm } from '../components/stoolEntryForm.js';
 
 function severityColor(v) {
   if (v === null || v === undefined) return 'var(--line)';
@@ -188,6 +190,18 @@ export async function renderSimptomi(root, go) {
       renderSimptomi(root, go);
     });
   });
+  root.querySelectorAll('[data-edit-symptom]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const entry = await store.get('symptomEntries', el.dataset.editSymptom);
+      if (entry) openSymptomEntryForm(entry, () => renderSimptomi(root, go));
+    });
+  });
+  root.querySelectorAll('[data-edit-stool]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const entry = await store.get('stoolEntries', el.dataset.editStool);
+      if (entry) openStoolEntryForm(entry, () => renderSimptomi(root, go));
+    });
+  });
 }
 
 function entryRow(e) {
@@ -198,7 +212,7 @@ function entryRow(e) {
     return `
       <div class="hist-row">
         <div class="hist-dot" style="background:var(--coral-deep);"></div>
-        <div class="hist-main">
+        <div class="hist-main" data-edit-stool="${e.id}" style="cursor:pointer;">
           <div class="hist-title">Stolica — tip ${e.bristolTip} (${esc(bt?.label || '')})</div>
           <div class="hist-sub">${time}</div>
         </div>
@@ -209,7 +223,7 @@ function entryRow(e) {
   return `
     <div class="hist-row">
       <div class="hist-dot" style="background:${severityColor(e.jacina)};"></div>
-      <div class="hist-main">
+      <div class="hist-main" data-edit-symptom="${e.id}" style="cursor:pointer;">
         <div class="hist-title">${esc(e.simptom)}</div>
         <div class="hist-sub">${time}${e.beleska ? ' · ' + esc(e.beleska) : ''}${e.fodmapTest ? ' · FODMAP test' : ''}</div>
       </div>

@@ -31,31 +31,54 @@ function hex2rgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-// Renders the app's "rhythm arc" mark (ring + center dot) as a flat PNG icon,
-// generated at build time since no image tooling is available in this environment.
-function makeIcon(size, { bg, fg, maskableSafe }) {
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/** Points along a loose coil, reading as a friendly abstract "gut" spiral. */
+function coilPoints(cx, cy, maxR, turns, samples) {
+  const pts = [];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const r = maxR * Math.pow(t, 0.92);
+    const angle = t * turns * Math.PI * 2 - Math.PI * 0.35;
+    pts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  return pts;
+}
+
+// Renders the app's "coiled gut" mark as a flat PNG icon, generated at build
+// time since no image tooling is available in this environment.
+function makeIcon(size, { bg, fg, highlight, maskableSafe }) {
   const [br, bgg, bb] = hex2rgb(bg);
   const [fr, fgg, fb] = hex2rgb(fg);
+  const [hr, hgg, hb] = hex2rgb(highlight);
   const raw = Buffer.alloc(size * (1 + size * 4));
   const cx = size / 2, cy = size / 2;
   const outerR = size * 0.5;
-  const ringOuter = outerR * 0.78;
-  const ringInner = ringOuter - size * 0.085;
+  const tubeR = size * 0.052;
+  const path = coilPoints(cx, cy, size * 0.34, 2.6, 340);
+
   for (let y = 0; y < size; y++) {
     raw[y * (1 + size * 4)] = 0;
     for (let x = 0; x < size; x++) {
       const dx = x - cx, dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const distCenter = Math.sqrt(dx * dx + dy * dy);
       let r = br, g = bgg, b = bb, a = 255;
-      if (!maskableSafe && dist > outerR) {
+      if (!maskableSafe && distCenter > outerR) {
         a = 0;
       } else {
-        const angle = Math.atan2(dy, dx);
-        const inRingBand = dist <= ringOuter && dist >= ringInner;
-        const isUpperArc = angle > -Math.PI * 0.98 && angle < -0.02;
-        if (inRingBand && isUpperArc) { r = fr; g = fgg; b = fb; }
-        const dotR = size * 0.06;
-        if (dist < dotR) { r = fr; g = fgg; b = fb; }
+        let minD = Infinity;
+        for (let i = 0; i < path.length; i++) {
+          const pdx = x - path[i][0], pdy = y - path[i][1];
+          const d = pdx * pdx + pdy * pdy;
+          if (d < minD) minD = d;
+        }
+        minD = Math.sqrt(minD);
+        if (minD <= tubeR) {
+          const inner = 1 - Math.min(minD / (tubeR * 0.55), 1);
+          r = Math.round(lerp(fr, hr, inner));
+          g = Math.round(lerp(fgg, hgg, inner));
+          b = Math.round(lerp(fb, hb, inner));
+        }
       }
       const idx = y * (1 + size * 4) + 1 + x * 4;
       raw[idx] = r; raw[idx + 1] = g; raw[idx + 2] = b; raw[idx + 3] = a;
@@ -78,10 +101,11 @@ function makeIcon(size, { bg, fg, maskableSafe }) {
 const outDir = process.argv[2] || 'public/icons';
 const rose = '#D6567F';
 const cream = '#FDEDF3';
+const highlight = '#FFFFFF';
 
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(`${outDir}/icon-192.png`, makeIcon(192, { bg: rose, fg: cream, maskableSafe: false }));
-fs.writeFileSync(`${outDir}/icon-512.png`, makeIcon(512, { bg: rose, fg: cream, maskableSafe: false }));
-fs.writeFileSync(`${outDir}/maskable-512.png`, makeIcon(512, { bg: rose, fg: cream, maskableSafe: true }));
-fs.writeFileSync(`${outDir}/apple-touch-icon.png`, makeIcon(180, { bg: rose, fg: cream, maskableSafe: true }));
+fs.writeFileSync(`${outDir}/icon-192.png`, makeIcon(192, { bg: rose, fg: cream, highlight, maskableSafe: false }));
+fs.writeFileSync(`${outDir}/icon-512.png`, makeIcon(512, { bg: rose, fg: cream, highlight, maskableSafe: false }));
+fs.writeFileSync(`${outDir}/maskable-512.png`, makeIcon(512, { bg: rose, fg: cream, highlight, maskableSafe: true }));
+fs.writeFileSync(`${outDir}/apple-touch-icon.png`, makeIcon(180, { bg: rose, fg: cream, highlight, maskableSafe: true }));
 console.log('icons written to', outDir);

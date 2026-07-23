@@ -8,8 +8,7 @@ import { renderIzvestaj } from './screens/izvestaj.js';
 import { renderPodesavanja } from './screens/podesavanja.js';
 import { registerSW } from 'virtual:pwa-register';
 import { scheduleAllReminders } from './notifications.js';
-import { ensureAuth } from './supabase.js';
-import { drainOutbox } from './sync.js';
+import { archiveExpiredTherapy } from './utils/therapy.js';
 
 const TABS = [
   { id: 'danas', label: 'Danas', icon: '🏠', render: renderDanas },
@@ -61,12 +60,12 @@ document.getElementById('bottomnav').addEventListener('click', (e) => {
 
 async function boot() {
   await initDB();
+  await archiveExpiredTherapy();
   refresh();
   scheduleAllReminders();
   if ('serviceWorker' in navigator) {
     registerSW({ immediate: true });
   }
-  ensureAuth().then(drainOutbox).catch(() => { /* offline or backup not reachable — retried on 'online' event */ });
 }
 
 boot();

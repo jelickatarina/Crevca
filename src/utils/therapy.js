@@ -1,5 +1,25 @@
 import { store } from '../db.js';
-import { BLOCK_ORDER, blockForTime, isoDate, startOfWeek, startOfMonth } from './date.js';
+import { BLOCK_ORDER, blockForTime, isoDate, startOfWeek, startOfMonth, daysBetween } from './date.js';
+
+/** Archives therapy items whose trajanje_dana (auto-archive duration) has elapsed. */
+export async function archiveExpiredTherapy(now = new Date()) {
+  const todayIso = isoDate(now);
+  const items = await store.getAll('therapyItems');
+  for (const item of items) {
+    if (item.arhivirano || !item.trajanje_dana) continue;
+    const startIso = isoDate(new Date(item.createdAt));
+    if (daysBetween(startIso, todayIso) >= item.trajanje_dana) {
+      await store.put('therapyItems', { ...item, arhivirano: true });
+    }
+  }
+}
+
+export function daysRemaining(item, now = new Date()) {
+  if (!item.trajanje_dana) return null;
+  const startIso = isoDate(new Date(item.createdAt));
+  const elapsed = daysBetween(startIso, isoDate(now));
+  return Math.max(item.trajanje_dana - elapsed, 0);
+}
 
 export async function loadTherapyData(dateIso) {
   const items = (await store.getAll('therapyItems')).filter(i => !i.arhivirano);

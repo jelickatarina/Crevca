@@ -38,7 +38,10 @@ h1,h2,h3{ font-family:'Fredoka','Nunito',sans-serif; margin:0; }
 button, input, select, textarea{ font-family:inherit; }
 #app{ max-width:480px; margin:0 auto; min-height:100vh; position:relative; padding-bottom: env(safe-area-inset-bottom); }
 
-.screen{ padding:20px 18px calc(96px + env(safe-area-inset-bottom)); animation: fadein .18s ease; }
+.screen{
+  padding: calc(20px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  animation: fadein .18s ease;
+}
 @keyframes fadein{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
 
 .eyebrow{ font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--coral-deep); font-weight:700; margin-bottom:4px; }

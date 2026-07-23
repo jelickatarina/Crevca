@@ -57,7 +57,7 @@ function buildSections(foods, phase) {
 function foodRowHtml(food, schedule, verdicts, todayIso) {
   if (food.custom) {
     return `
-      <div class="food-row">
+      <div class="food-row" data-edit-food="${food.id}" style="cursor:pointer;">
         <div>
           <div class="food-name">${esc(food.naziv)}</div>
           ${food.napomena_o_kolicini ? `<div class="food-note">${esc(food.napomena_o_kolicini)}</div>` : ''}
@@ -78,37 +78,48 @@ function foodRowHtml(food, schedule, verdicts, todayIso) {
   `;
 }
 
-function openAddFoodModal(onDone) {
+function openFoodModal(food, onDone) {
+  const isEdit = !!food;
   openModal(`
-    <div class="modal-head"><h2>Dodaj namirnicu</h2><button class="modal-close" data-close>✕</button></div>
+    <div class="modal-head"><h2>${isEdit ? 'Izmeni namirnicu' : 'Dodaj namirnicu'}</h2><button class="modal-close" data-close>✕</button></div>
     <form id="food-form">
-      <div class="field"><label>Naziv</label><input type="text" name="naziv" required maxlength="60" placeholder="npr. Kokosovo mleko" /></div>
+      <div class="field"><label>Naziv</label><input type="text" name="naziv" required maxlength="60" placeholder="npr. Kokosovo mleko" value="${esc(food?.naziv || '')}" /></div>
       <div class="field">
         <label>Kategorija</label>
-        <select name="kategorija">${CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select>
+        <select name="kategorija">${CATEGORIES.map(c => `<option value="${esc(c)}" ${food?.kategorija === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
       </div>
-      <div class="field"><label>Napomena</label><textarea name="napomena" rows="2" maxlength="200" placeholder="Lična napomena (opciono)"></textarea></div>
-      <button type="submit" class="save-btn">Dodaj</button>
+      <div class="field"><label>Napomena</label><textarea name="napomena" rows="2" maxlength="200" placeholder="Lična napomena (opciono)">${esc(food?.napomena_o_kolicini || '')}</textarea></div>
+      <div class="modal-actions">
+        ${isEdit ? '<button type="button" class="btn-danger" id="del-food" style="flex:1;">Obriši</button>' : ''}
+        <button type="submit" class="save-btn" style="flex:${isEdit ? 2 : 1};">${isEdit ? 'Sačuvaj' : 'Dodaj'}</button>
+      </div>
     </form>
   `, {
     onMount(sheet) {
       sheet.querySelector('[data-close]').addEventListener('click', closeModal);
+      if (isEdit) {
+        sheet.querySelector('#del-food').addEventListener('click', async () => {
+          if (!confirm(`Obrisati "${food.naziv}"?`)) return;
+          await store.delete('foods', food.id);
+          closeModal();
+          toast('Namirnica obrisana');
+          onDone?.();
+        });
+      }
       sheet.querySelector('#food-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
         const naziv = fd.get('naziv').trim();
         if (!naziv) return;
-        await store.put('foods', {
-          id: uid(),
-          naziv,
-          kategorija: fd.get('kategorija'),
-          fodmap_grupa: null,
-          portion_safe: false,
-          napomena_o_kolicini: fd.get('napomena').trim() || null,
-          custom: true,
-        });
+        const record = isEdit ? { ...food } : {
+          id: uid(), fodmap_grupa: null, portion_safe: false, custom: true,
+        };
+        record.naziv = naziv;
+        record.kategorija = fd.get('kategorija');
+        record.napomena_o_kolicini = fd.get('napomena').trim() || null;
+        await store.put('foods', record);
         closeModal();
-        toast('Namirnica dodata');
+        toast(isEdit ? 'Sačuvano' : 'Namirnica dodata');
         onDone?.();
       });
     },
@@ -178,6 +189,12 @@ export async function renderNamirnice(root, go) {
     });
   });
   root.querySelector('#add-food').addEventListener('click', () => {
-    openAddFoodModal(() => renderNamirnice(root, go));
+    openFoodModal(null, () => renderNamirnice(root, go));
+  });
+  root.querySelectorAll('[data-edit-food]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const food = await store.get('foods', el.dataset.editFood);
+      if (food) openFoodModal(food, () => renderNamirnice(root, go));
+    });
   });
 }

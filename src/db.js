@@ -1,6 +1,5 @@
 import { seedFoods } from './data/foods.js';
 import { seedTherapy } from './data/therapy.js';
-import { pushToCloud, deleteFromCloud, clearCloud } from './sync.js';
 
 const DB_NAME = 'dnevnik-ritma';
 const DB_VERSION = 1;
@@ -58,18 +57,6 @@ function reqToPromise(req) {
   });
 }
 
-// keyPath field per store, used to mirror writes to the cloud backup (see sync.js)
-const KEY_FIELDS = {
-  therapyItems: 'id',
-  therapyLogs: 'key',
-  prnLogs: 'id',
-  symptomEntries: 'id',
-  stoolEntries: 'id',
-  fodmapVerdicts: 'groupIndex',
-  foods: 'id',
-  settings: 'key',
-};
-
 export const store = {
   async getAll(name) {
     const s = await tx(name, 'readonly');
@@ -81,22 +68,15 @@ export const store = {
   },
   async put(name, value) {
     const s = await tx(name, 'readwrite');
-    const result = await reqToPromise(s.put(value));
-    const keyField = KEY_FIELDS[name];
-    if (keyField) pushToCloud(name, value[keyField], value);
-    return result;
+    return reqToPromise(s.put(value));
   },
   async delete(name, key) {
     const s = await tx(name, 'readwrite');
-    const result = await reqToPromise(s.delete(key));
-    if (KEY_FIELDS[name]) deleteFromCloud(name, key);
-    return result;
+    return reqToPromise(s.delete(key));
   },
   async clear(name) {
     const s = await tx(name, 'readwrite');
-    const result = await reqToPromise(s.clear());
-    if (KEY_FIELDS[name]) clearCloud(name);
-    return result;
+    return reqToPromise(s.clear());
   },
 };
 
