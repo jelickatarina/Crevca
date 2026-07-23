@@ -1,4 +1,5 @@
 import { seedFoods } from './data/foods.js';
+import { seedTherapy } from './data/therapy.js';
 import { pushToCloud, deleteFromCloud, clearCloud } from './sync.js';
 
 const DB_NAME = 'dnevnik-ritma';
@@ -137,5 +138,12 @@ export async function initDB() {
       await store.put('foods', f);
     }
     await setSetting('foodsSeeded', true);
+  }
+  const therapySeeded = await getSetting('therapySeeded');
+  if (!therapySeeded) {
+    for (const t of seedTherapy) {
+      await store.put('therapyItems', { ...t, arhivirano: false, createdAt: Date.now() });
+    }
+    await setSetting('therapySeeded', true);
   }
 }
