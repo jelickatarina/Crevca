@@ -4,7 +4,7 @@ import { getSetting } from '../db.js';
 import { computeSchedule, getPhase } from '../utils/fodmap.js';
 import {
   loadTherapyData, groupByBlock, blockStats, toggleTherapyTaken,
-  logPrnUse, allPrnCountsToday, prnCounts as prnCountsForItem,
+  logPrnUse, removeLastPrnUse, allPrnCountsToday, prnCounts as prnCountsForItem,
 } from '../utils/therapy.js';
 import { store } from '../db.js';
 import { openTherapyForm } from '../components/therapyForm.js';
@@ -60,9 +60,10 @@ function medRow(item, taken, dateIso) {
 function prnRow(item, count) {
   return `
     <div class="med-row" data-item="${item.id}">
-      <button class="check" data-action="log-prn" data-id="${item.id}" style="border-radius:50%; font-size:16px; color:var(--teal);">+</button>
+      <button class="check" data-action="unlog-prn" data-id="${item.id}" ${count === 0 ? 'disabled' : ''} style="border-radius:50%; font-size:16px; color:var(--teal);">–</button>
       <label data-action="edit" data-id="${item.id}">${esc(item.naziv)}</label>
       <span class="time">danas: ${count}</span>
+      <button class="check" data-action="log-prn" data-id="${item.id}" style="border-radius:50%; font-size:16px; color:var(--teal);">+</button>
     </div>
   `;
 }
@@ -158,6 +159,13 @@ export async function renderDanas(root, go) {
     btn.addEventListener('click', async () => {
       await logPrnUse(btn.dataset.id);
       toast('Zabeleženo');
+      renderDanas(root, go);
+    });
+  });
+  root.querySelectorAll('[data-action="unlog-prn"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await removeLastPrnUse(btn.dataset.id);
+      toast('Uklonjeno');
       renderDanas(root, go);
     });
   });

@@ -10,6 +10,8 @@ import { registerSW } from 'virtual:pwa-register';
 import { scheduleAllReminders } from './notifications.js';
 import { archiveExpiredTherapy } from './utils/therapy.js';
 import { NAV_ICONS } from './components/icons.js';
+import { ensureSessionLoaded } from './supabase.js';
+import { drainOutbox } from './sync.js';
 
 const TABS = [
   { id: 'danas', label: 'Danas', icon: NAV_ICONS.danas, render: renderDanas },
@@ -62,8 +64,10 @@ document.getElementById('bottomnav').addEventListener('click', (e) => {
 async function boot() {
   await initDB();
   await archiveExpiredTherapy();
+  await ensureSessionLoaded();
   refresh();
   scheduleAllReminders();
+  drainOutbox();
   if ('serviceWorker' in navigator) {
     registerSW({ immediate: true });
   }

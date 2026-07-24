@@ -5,6 +5,7 @@ import { stoolStatsForRange, symptomStatsForRange, urgencyDaysInRange, therapyAd
 import { SYMPTOMS } from '../data/symptoms.js';
 import { computeSchedule } from '../utils/fodmap.js';
 import { toast } from '../toast.js';
+import { openModal, closeModal } from '../components/modal.js';
 
 let periodMode = 'week'; // 'week' | 'month'
 
@@ -139,15 +140,31 @@ export async function renderIzvestaj(root, go) {
       try {
         await navigator.share({ title: 'Dnevnik ritma — izveštaj', text });
         return;
-      } catch {
-        // user cancelled or share failed — fall through to clipboard
+      } catch (err) {
+        if (err?.name === 'AbortError') return; // she cancelled the share sheet herself
+        // otherwise fall through to clipboard / manual copy
       }
     }
     try {
       await navigator.clipboard.writeText(text);
       toast('Izveštaj kopiran — nalepi ga gde želiš');
     } catch {
-      toast('Deljenje nije podržano na ovom uređaju');
+      openShareFallback(text);
     }
+  });
+}
+
+function openShareFallback(text) {
+  openModal(`
+    <div class="modal-head"><h2>Izveštaj</h2><button class="modal-close" data-close>✕</button></div>
+    <div class="hint" style="margin-bottom:10px;">Deljenje nije uspelo automatski — tekst je već označen ispod, samo pritisni i drži pa "Kopiraj".</div>
+    <textarea id="share-text" readonly rows="14" style="width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px; font-size:12.5px; color:var(--ink); background:var(--sand); resize:none;">${esc(text)}</textarea>
+  `, {
+    onMount(sheet) {
+      sheet.querySelector('[data-close]').addEventListener('click', closeModal);
+      const ta = sheet.querySelector('#share-text');
+      ta.focus();
+      ta.setSelectionRange(0, ta.value.length);
+    },
   });
 }
