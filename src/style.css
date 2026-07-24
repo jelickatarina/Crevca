@@ -67,7 +67,8 @@ button, input, select, textarea{ font-family:inherit; }
   min-height:44px; justify-content:center;
 }
 .bottomnav button.active{ color:var(--teal); }
-.navicon{ font-size:19px; line-height:1; }
+.navicon{ display:flex; align-items:center; justify-content:center; }
+.navicon svg{ display:block; }
 
 /* ---- rhythm arc (Danas) ---- */
 .rhythm-card{ background:var(--surface); border-radius:24px; padding:22px 18px 16px; margin-top:14px; box-shadow:var(--shadow); position:relative; overflow:hidden; }

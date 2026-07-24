@@ -9,14 +9,15 @@ import { renderPodesavanja } from './screens/podesavanja.js';
 import { registerSW } from 'virtual:pwa-register';
 import { scheduleAllReminders } from './notifications.js';
 import { archiveExpiredTherapy } from './utils/therapy.js';
+import { NAV_ICONS } from './components/icons.js';
 
 const TABS = [
-  { id: 'danas', label: 'Danas', icon: '🏠', render: renderDanas },
-  { id: 'simptomi', label: 'Simptomi', icon: '📝', render: renderSimptomi },
-  { id: 'fodmap', label: 'FODMAP', icon: '🌾', render: renderFodmap },
-  { id: 'namirnice', label: 'Namirnice', icon: '🥗', render: renderNamirnice },
-  { id: 'izvestaj', label: 'Izveštaj', icon: '📊', render: renderIzvestaj },
-  { id: 'podesavanja', label: 'Podešavanja', icon: '⚙️', render: renderPodesavanja },
+  { id: 'danas', label: 'Danas', icon: NAV_ICONS.danas, render: renderDanas },
+  { id: 'simptomi', label: 'Simptomi', icon: NAV_ICONS.simptomi, render: renderSimptomi },
+  { id: 'fodmap', label: 'FODMAP', icon: NAV_ICONS.fodmap, render: renderFodmap },
+  { id: 'namirnice', label: 'Namirnice', icon: NAV_ICONS.namirnice, render: renderNamirnice },
+  { id: 'izvestaj', label: 'Izveštaj', icon: NAV_ICONS.izvestaj, render: renderIzvestaj },
+  { id: 'podesavanja', label: 'Podešavanja', icon: NAV_ICONS.podesavanja, render: renderPodesavanja },
 ];
 
 const state = { tab: localStorage.getItem('lastTab') || 'danas' };
