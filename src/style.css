@@ -46,6 +46,10 @@ button, input, select, textarea{ font-family:inherit; }
 }
 @keyframes fadein{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
 
+/* ---- login gate ---- */
+.auth-gate{ display:flex; flex-direction:column; justify-content:center; min-height:100%; padding:20px 4px; }
+.auth-mark{ width:88px; height:88px; border-radius:50%; background:var(--teal-pale); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+
 .eyebrow{ font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--coral-deep); font-weight:700; margin-bottom:4px; }
 .pagetitle{ font-size:26px; font-weight:800; letter-spacing:-0.01em; }
 .pagesub{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; }

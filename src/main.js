@@ -6,11 +6,12 @@ import { renderFodmap } from './screens/fodmap.js';
 import { renderNamirnice } from './screens/namirnice.js';
 import { renderIzvestaj } from './screens/izvestaj.js';
 import { renderPodesavanja } from './screens/podesavanja.js';
+import { renderAuthGate } from './screens/authGate.js';
 import { registerSW } from 'virtual:pwa-register';
 import { scheduleAllReminders } from './notifications.js';
 import { archiveExpiredTherapy } from './utils/therapy.js';
 import { NAV_ICONS } from './components/icons.js';
-import { ensureSessionLoaded } from './supabase.js';
+import { ensureSessionLoaded, isLoggedIn } from './supabase.js';
 import { drainOutbox } from './sync.js';
 
 const TABS = [
@@ -23,21 +24,8 @@ const TABS = [
 ];
 
 const state = { tab: localStorage.getItem('lastTab') || 'danas' };
-
 const app = document.getElementById('app');
-app.innerHTML = `
-  <div id="screen-root" class="screen"></div>
-  <nav class="bottomnav" id="bottomnav">
-    ${TABS.map(t => `
-      <button data-tab="${t.id}" class="${t.id === state.tab ? 'active' : ''}">
-        <span class="navicon">${t.icon}</span>
-        <span>${t.label}</span>
-      </button>
-    `).join('')}
-  </nav>
-`;
-
-const screenRoot = document.getElementById('screen-root');
+let screenRoot = null;
 
 export function refresh() {
   const tab = TABS.find(t => t.id === state.tab);
@@ -56,18 +44,40 @@ export function go(tabId) {
   refresh();
 }
 
-document.getElementById('bottomnav').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-tab]');
-  if (btn) go(btn.dataset.tab);
-});
+function startApp() {
+  app.innerHTML = `
+    <div id="screen-root" class="screen"></div>
+    <nav class="bottomnav" id="bottomnav">
+      ${TABS.map(t => `
+        <button data-tab="${t.id}" class="${t.id === state.tab ? 'active' : ''}">
+          <span class="navicon">${t.icon}</span>
+          <span>${t.label}</span>
+        </button>
+      `).join('')}
+    </nav>
+  `;
+  screenRoot = document.getElementById('screen-root');
+  document.getElementById('bottomnav').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-tab]');
+    if (btn) go(btn.dataset.tab);
+  });
+  refresh();
+  scheduleAllReminders();
+  drainOutbox();
+}
 
 async function boot() {
   await initDB();
   await archiveExpiredTherapy();
   await ensureSessionLoaded();
-  refresh();
-  scheduleAllReminders();
-  drainOutbox();
+
+  if (isLoggedIn()) {
+    startApp();
+  } else {
+    screenRoot = app;
+    renderAuthGate(app, startApp);
+  }
+
   if ('serviceWorker' in navigator) {
     registerSW({ immediate: true });
   }

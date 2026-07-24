@@ -37,14 +37,29 @@ async function afterAuth() {
   await drainOutbox();
 }
 
-export async function login(email, password) {
-  await signIn(email, password);
+/**
+ * Single entry point for the login screen: tries to sign in, and if that
+ * fails (no such account yet) creates one instead — no separate "register"
+ * step, since this is a single-user app.
+ */
+export async function continueAuth(email, password) {
+  try {
+    await signIn(email, password);
+  } catch {
+    try {
+      const result = await signUp(email, password);
+      if (!result.session) {
+        return { needsEmailConfirm: true };
+      }
+    } catch (signUpErr) {
+      if (/registered/i.test(signUpErr.message || '')) {
+        throw new Error('Pogrešna lozinka za taj email.');
+      }
+      throw signUpErr;
+    }
+  }
   await afterAuth();
-}
-
-export async function register(email, password) {
-  await signUp(email, password);
-  await afterAuth();
+  return { needsEmailConfirm: false };
 }
 
 export async function logout() {
