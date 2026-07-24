@@ -36,7 +36,12 @@ body{
 }
 h1,h2,h3{ font-family:'Fredoka','Nunito',sans-serif; margin:0; }
 button, input, select, textarea{ font-family:inherit; }
-#app{ max-width:480px; margin:0 auto; min-height:100vh; position:relative; padding-bottom: env(safe-area-inset-bottom); }
+#app{
+  max-width:480px; margin:0 auto; position:relative;
+  min-height:100vh; min-height:100dvh;
+  display:flex; flex-direction:column;
+}
+#screen-root{ flex:1 1 auto; }
 
 .screen{
   padding: calc(20px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
@@ -52,10 +57,14 @@ button, input, select, textarea{ font-family:inherit; }
 .card h2{ font-size:15px; font-weight:700; margin-bottom:2px; }
 .card .hint{ font-size:11.5px; color:var(--ink-soft); margin-bottom:12px; line-height:1.5; }
 
-/* ---- bottom nav ---- */
+/* ---- bottom nav ----
+   position:sticky (not fixed) so it tracks Safari's real visual viewport —
+   position:fixed anchors to the layout viewport, which iOS Safari sizes as
+   if its own toolbar were hidden, leaving a gap above the toolbar when it's
+   shown. Sticky avoids that. */
 .bottomnav{
-  position:fixed; left:0; right:0; bottom:0;
-  max-width:480px; margin:0 auto;
+  position:sticky; left:0; right:0; bottom:0;
+  flex-shrink:0;
   background:var(--surface);
   border-top:1px solid var(--line);
   display:flex; padding:8px 4px calc(10px + env(safe-area-inset-bottom));

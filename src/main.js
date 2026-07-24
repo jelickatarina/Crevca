@@ -24,7 +24,7 @@ const state = { tab: localStorage.getItem('lastTab') || 'danas' };
 
 const app = document.getElementById('app');
 app.innerHTML = `
-  <div id="screen-root"></div>
+  <div id="screen-root" class="screen"></div>
   <nav class="bottomnav" id="bottomnav">
     ${TABS.map(t => `
       <button data-tab="${t.id}" class="${t.id === state.tab ? 'active' : ''}">
